@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>计算器</title>
+<style>
+  :root{
+    --bg1:#12141c;
+    --bg2:#1c2030;
+    --line:rgba(255,255,255,.10);
+    --txt:#f4f6fb;
+    --muted:#8b93a7;
+    --num:rgba(255,255,255,.08);
+    --num-hover:rgba(255,255,255,.16);
+    --fn:rgba(255,255,255,.14);
+    --fn-hover:rgba(255,255,255,.22);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    display:flex;align-items:center;justify-content:center;
+    font-family:"Segoe UI","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    background:
+      radial-gradient(1200px 800px at 15% 0%, #2a2f45 0%, transparent 60%),
+      radial-gradient(900px 700px at 100% 100%, #3a2438 0%, transparent 55%),
+      linear-gradient(160deg, var(--bg1), var(--bg2));
+    color:var(--txt);
+    padding:24px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .calc{
+    width:100%;max-width:390px;
+    padding:20px;
+    border:1px solid var(--line);
+    border-radius:26px;
+    background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
+    box-shadow:0 30px 60px -20px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.12);
+    backdrop-filter:blur(18px);
+  }
+  .screen{
+    padding:18px 18px 14px;
+    border-radius:18px;
+    background:rgba(0,0,0,.28);
+    border:1px solid rgba(255,255,255,.07);
+    box-shadow:inset 0 2px 12px rgba(0,0,0,.45);
+    text-align:right;
+    overflow:hidden;
+  }
+  .history{
+    min-height:22px;
+    font-size:15px;
+    color:var(--muted);
+    letter-spacing:.5px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .output{
+    margin-top:6px;
+    font-size:44px;
+    line-height:1.1;
+    font-weight:300;
+    letter-spacing:.5px;
+    word-break:break-all;
+  }
+  .output.error{color:#ff6b6b;font-size:34px;}
+  .keys{
+    margin-top:16px;
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:10px;
+  }
+  .key{
+    height:64px;
+    border:none;
+    border-radius:16px;
+    background:var(--num);
+    color:var(--txt);
+    font-family:inherit;
+    font-size:22px;
+    font-weight:400;
+    cursor:pointer;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    transition:background .15s ease, transform .08s ease, box-shadow .15s ease;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07);
+  }
+  .key:hover{background:var(--num-hover);}
+  .key:active{transform:scale(.95);}
+  .key:focus-visible{outline:2px solid #ffb054;outline-offset:2px;}
+  .key.fn{background:var(--fn);font-size:20px;}
+  .key.fn:hover{background:var(--fn-hover);}
+  .key.op{
+    background:linear-gradient(135deg,#ffb054,#ff8a3d);
+    color:#231a12;font-weight:600;font-size:24px;
+  }
+  .key.op:hover{filter:brightness(1.06);}
+  .key.eq{
+    background:linear-gradient(135deg,#ff9f43,#ff6b6b);
+    color:#2a1206;font-weight:700;font-size:26px;
+  }
+  .key.eq:hover{filter:brightness(1.06);}
+  .hint{
+    margin-top:14px;
+    text-align:center;
+    font-size:12px;
+    color:var(--muted);
+    letter-spacing:.3px;
+  }
+  @media (max-width:420px){
+    .calc{max-width:100%;padding:14px;border-radius:22px;}
+    .output{font-size:36px;}
+    .key{height:56px;font-size:20px;border-radius:14px;}
+  }
+</style>
+</head>
+<body>
+  <main class="calc">
+    <div class="screen">
+      <div class="history" id="history"></div>
+      <div class="output" id="output">0</div>
+    </div>
+    <div class="keys">
+      <button class="key fn" data-action="clear" aria-label="全部清除">AC</button>
+      <button class="key fn" data-action="backspace" aria-label="退格">⌫</button>
+      <button class="key fn" data-action="percent" aria-label="百分号">%</button>
+      <button class="key op" data-action="op" data-value="div" aria-label="除">÷</button>
+
+      <button class="key" data-action="digit" data-value="7">7</button>
+      <button class="key" data-action="digit" data-value="8">8</button>
+      <button class="key" data-action="digit" data-value="9">9</button>
+      <button class="key op" data-action="op" data-value="mul" aria-label="乘">×</button>
+
+      <button class="key" data-action="digit" data-value="4">4</button>
+      <button class="key" data-action="digit" data-value="5">5</button>
+      <button class="key" data-action="digit" data-value="6">6</button>
+      <button class="key op" data-action="op" data-value="sub" aria-label="减">−</button>
+
+      <button class="key" data-action="digit" data-value="1">1</button>
+      <button class="key" data-action="digit" data-value="2">2</button>
+      <button class="key" data-action="digit" data-value="3">3</button>
+      <button class="key op" data-action="op" data-value="add" aria-label="加">+</button>
+
+      <button class="key fn" data-action="sign" aria-label="正负号">±</button>
+      <button class="key" data-action="digit" data-value="0">0</button>
+      <button class="key" data-action="dot" aria-label="小数点">.</button>
+      <button class="key eq" data-action="equals" aria-label="等于">=</button>
+    </div>
+    <div class="hint">支持键盘：数字 · + − × ÷ · Enter 计算 · Esc 清空 · 退格删除</div>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  var outputEl = document.getElementById('output');
+  var historyEl = document.getElementById('history');
+
+  var SYMBOL = { add: '+', sub: '−', mul: '×', div: '÷' };
+
+  var current = '0';
+  var previous = null;
+  var operator = null;
+  var overwrite = true;
+  var lastOperator = null;
+  var lastOperand = null;
+  var errored = false;
+
+  function numberToString(n) {
+    if (!isFinite(n)) return '错误';
+    var r = parseFloat(n.toPrecision(12));
+    return String(r);
+  }
+
+  function formatDisplay(value) {
+    if (value === '错误') return value;
+    if (value.indexOf('e') !== -1 || value.indexOf('E') !== -1) return value;
+    var negative = value.charAt(0) === '-';
+    var body = negative ? value.slice(1) : value;
+    var parts = body.split('.');
+    var intPart = parts[0];
+    var decPart = parts.length > 1 ? parts[1] : null;
+    var grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return (negative ? '-' : '') + grouped + (decPart !== null ? '.' + decPart : '');
+  }
+
+  function render() {
+    outputEl.textContent = formatDisplay(current);
+    if (errored) {
+      outputEl.classList.add('error');
+    } else {
+      outputEl.classList.remove('error');
+    }
+    if (operator !== null && previous !== null) {
+      historyEl.textContent = formatDisplay(numberToString(previous)) + ' ' + SYMBOL[operator];
+    } else {
+      historyEl.textContent = '';
+    }
+  }
+
+  function compute(a, b, op) {
+    if (op === 'add') return a + b;
+    if (op === 'sub') return a - b;
+    if (op === 'mul') return a * b;
+    if (op === 'div') return b === 0 ? NaN : a / b;
+    return b;
+  }
+
+  function clearAll() {
+    current = '0';
+    previous = null;
+    operator = null;
+    overwrite = true;
+    lastOperator = null;
+    lastOperand = null;
+    errored = false;
+    render();
+  }
+
+  function setError() {
+    current = '错误';
+    previous = null;
+    operator = null;
+    overwrite = true;
+    lastOperator = null;
+    lastOperand = null;
+    errored = true;
+    render();
+  }
+
+  function inputDigit(d) {
+    if (errored) clearAll();
+    if (overwrite) {
+      current = d;
+      overwrite = false;
+      render();
+      return;
+    }
+    var digits = current.replace('-', '').replace('.', '');
+    if (digits.length >= 15) return;
+    current = current === '0' ? d : current + d;
+    render();
+  }
+
+  function inputDot() {
+    if (errored) clearAll();
+    if (overwrite) {
+      current = '0.';
+      overwrite = false;
+      render();
+      return;
+    }
+    if (current.indexOf('.') === -1) {
+      current += '.';
+      render();
+    }
+  }
+
+  function backspace() {
+    if (errored) { clearAll(); return; }
+    if (overwrite) { current = '0'; render(); return; }
+    if (current.length <= 1 || (current.length === 2 && current.charAt(0) === '-')) {
+      current = '0';
+      overwrite = true;
+      render();
+      return;
+    }
+    current = current.slice(0, -1);
+    if (current === '-' || current === '') current = '0';
+    render();
+  }
+
+  function toggleSign() {
+    if (errored) return;
+    if (current === '0' || current === '0.') return;
+    current = current.charAt(0) === '-' ? current.slice(1) : '-' + current;
+    render();
+  }
+
+  function percent() {
+    if (errored) return;
+    var value = parseFloat(current);
+    var result;
+    if (previous !== null && (operator === 'add' || operator === 'sub')) {
+      result = previous * value / 100;
+    } else {
+      result = value / 100;
+    }
+    current = numberToString(result);
+    overwrite = true;
+    render();
+  }
+
+  function chooseOperator(op) {
+    if (errored) clearAll();
+    var value = parseFloat(current);
+    if (previous === null) {
+      previous = value;
+    } else if (!overwrite) {
+      var result = compute(previous, value, operator);
+      if (!isFinite(result)) { setError(); return; }
+      previous = parseFloat(numberToString(result));
+      current = numberToString(previous);
+    }
+    operator = op;
+    overwrite = true;
+    lastOperator = null;
+    lastOperand = null;
+    render();
+  }
+
+  function equals() {
+    if (errored) return;
+
+    if (operator === null) {
+      if (lastOperator !== null && lastOperand !== null) {
+        var repeatResult = compute(parseFloat(current), lastOperand, lastOperator);
+        var repeatExpr = formatDisplay(current) + ' ' + SYMBOL[lastOperator] + ' ' +
+                         formatDisplay(numberToString(lastOperand)) + ' =';
+        if (!isFinite(repeatResult)) { historyEl.textContent = repeatExpr; setError(); return; }
+        current = numberToString(repeatResult);
+        overwrite = true;
+        errored = false;
+        render();
+        historyEl.textContent = repeatExpr;
+      }
+      return;
+    }
+
+    var a = previous;
+    var b = parseFloat(current);
+    var result = compute(a, b, operator);
+    var expr = formatDisplay(numberToString(a)) + ' ' + SYMBOL[operator] + ' ' +
+               formatDisplay(numberToString(b)) + ' =';
+
+    lastOperator = operator;
+    lastOperand = b;
+    operator = null;
+    previous = null;
+    overwrite = true;
+
+    if (!isFinite(result)) { historyEl.textContent = expr; setError(); return; }
+
+    current = numberToString(result);
+    previous = parseFloat(current);
+    errored = false;
+    render();
+    historyEl.textContent = expr;
+  }
+
+  function dispatch(btn) {
+    var action = btn.getAttribute('data-action');
+    if (action === 'digit') inputDigit(btn.getAttribute('data-value'));
+    else if (action === 'dot') inputDot();
+    else if (action === 'op') chooseOperator(btn.getAttribute('data-value'));
+    else if (action === 'equals') equals();
+    else if (action === 'clear') clearAll();
+    else if (action === 'backspace') backspace();
+    else if (action === 'sign') toggleSign();
+    else if (action === 'percent') percent();
+  }
+
+  var buttons = document.querySelectorAll('.key');
+  Array.prototype.forEach.call(buttons, function (btn) {
+    btn.addEventListener('click', function () {
+      dispatch(btn);
+      btn.blur();
+    });
+  });
+
+  document.addEventListener('keydown', function (e) {
+    var k = e.key;
+    if (k >= '0' && k <= '9') { inputDigit(k); e.preventDefault(); return; }
+    if (k === '.' || k === ',') { inputDot(); e.preventDefault(); return; }
+    if (k === '+') { chooseOperator('add'); e.preventDefault(); return; }
+    if (k === '-') { chooseOperator('sub'); e.preventDefault(); return; }
+    if (k === '*' || k === 'x' || k === 'X') { chooseOperator('mul'); e.preventDefault(); return; }
+    if (k === '/') { chooseOperator('div'); e.preventDefault(); return; }
+    if (k === '%') { percent(); e.preventDefault(); return; }
+    if (k === 'Enter' || k === '=') { equals(); e.preventDefault(); return; }
+    if (k === 'Backspace') { backspace(); e.preventDefault(); return; }
+    if (k === 'Escape' || k === 'Delete') { clearAll(); e.preventDefault(); return; }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
